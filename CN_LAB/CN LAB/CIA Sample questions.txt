@@ -1,0 +1,443 @@
+﻿Question 1
+Server (Receiver)
+import java.net.*;
+import java.io.*;
+import java.io.File;
+
+
+class TestServer
+{
+    public static void main(String ar[])
+    {
+        try
+        {
+            // Create a server socket listening on port 2000
+            ServerSocket ss = new ServerSocket(2000);
+            System.out.println("\nWaiting.....");
+
+
+            // Accept a connection from the sender
+            Socket s = ss.accept();
+            System.out.println("\nConnection established.");
+
+
+            // Create input and output streams
+            BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            PrintStream pr = new PrintStream(s.getOutputStream());
+
+
+            // Read the directory name from the sender
+            String dirName = br.readLine();
+            System.out.println("Received directory name: " + dirName);
+
+
+            // Create the directory
+            File dir = new File(dirName);
+            boolean isCreated = dir.mkdir();
+
+
+            // Send confirmation message to the sender
+            if (isCreated)
+            {
+                pr.println("Successfully Created: " + dirName);
+                System.out.println("Directory created successfully.");
+            }
+            else
+            {
+                pr.println("Failed to create directory: " + dirName);
+                System.out.println("Failed to create directory.");
+            }
+
+
+            // Close the connection
+            s.close();
+            ss.close();
+        }
+        catch(Exception e)
+        {
+            System.out.println(e);
+        }
+    }
+}
+
+
+Sender
+import java.net.*;
+import java.io.*;
+
+
+class TestClient
+{
+    public static void main(String ar[])
+    {
+        try
+        {
+            // Define the IP addresses of the two remote machines
+            String[] serverIPs = {"192.168.1.101", "192.168.1.102"}; // Replace with actual IPs
+            String[] dirNames = {"RemoteDir1", "RemoteDir2"}; // Different directory names for each machine
+
+
+            for (int i = 0; i < serverIPs.length; i++)
+            {
+                // Connect to the server
+                Socket s = new Socket(serverIPs[i], 2000);
+                System.out.println("\nConnected to server: " + serverIPs[i]);
+
+
+                // Create input and output streams
+                BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                PrintStream pr = new PrintStream(s.getOutputStream());
+
+
+                // Send the directory name to the server
+                pr.println(dirNames[i]);
+                System.out.println("Sent directory name: " + dirNames[i]);
+
+
+                // Receive confirmation message from the server
+                String confirmation = br.readLine();
+                System.out.println("Confirmation from server: " + confirmation);
+
+
+                // Close the connection
+                s.close();
+            }
+        }
+        catch(Exception e)
+        {
+            System.out.println(e);
+        }
+    }
+}
+
+
+Question 2
+Server code
+import java.net.*;
+import java.io.*;
+
+
+class Server
+{
+    public static void main(String ar[])
+    {
+        try
+        {
+            // Create a server socket listening on port 2000
+            ServerSocket ss = new ServerSocket(2000);
+            System.out.println("Server is waiting for client connection...");
+
+
+            // Accept a connection from the client
+            Socket s = ss.accept();
+            System.out.println("Client connected.");
+
+
+            // Create input and output streams
+            BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            PrintStream pr = new PrintStream(s.getOutputStream());
+
+
+            // Send directory request to the client
+            String directoryPath = "list C:\\"; // Change this to the desired directory
+            pr.println(directoryPath);
+            System.out.println("Request sent to client: " + directoryPath);
+
+
+            // Receive response from the client
+            String response;
+            while ((response = br.readLine()) != null)
+            {
+                System.out.println(response);
+            }
+
+
+            // Close the connection
+            s.close();
+            ss.close();
+        }
+        catch (Exception e)
+        {
+            System.out.println(e);
+        }
+    }
+}
+
+
+Client code
+import java.net.*;
+import java.io.*;
+import java.io.File;
+
+
+class Client
+{
+    public static void main(String ar[])
+    {
+        try
+        {
+            // Connect to the server
+            Socket s = new Socket("localhost", 2000); // Replace "localhost" with the server's IP
+            System.out.println("Connected to server.");
+
+
+            // Create input and output streams
+            BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            PrintStream pr = new PrintStream(s.getOutputStream());
+
+
+            // Read the directory request from the server
+            String directoryPath = br.readLine();
+            System.out.println("Received request from server: " + directoryPath);
+
+
+            // Extract the directory path from the request
+            String path = directoryPath.substring(5); // Remove "list " from the request
+
+
+            // Check if the directory exists
+            File dir = new File(path);
+            if (dir.exists() && dir.isDirectory())
+            {
+                // List files, directories, and subdirectories
+                String[] contents = dir.list();
+                if (contents != null)
+                {
+                    for (String item : contents)
+                    {
+                        pr.println(item); // Send each item to the server
+                    }
+                }
+                else
+                {
+                    pr.println("Directory is empty.");
+                }
+            }
+            else
+            {
+                // Send error message if the directory does not exist
+                pr.println("Error: Directory does not exist.");
+            }
+
+
+            // Close the connection
+            s.close();
+        }
+        catch (Exception e)
+        {
+            System.out.println(e);
+        }
+    }
+}
+
+
+Question 3
+Sender
+import java.awt.*;
+import java.awt.event.*;
+import java.net.*;
+import java.io.*;
+
+
+class Sender implements ActionListener {
+    Frame f;
+    TextField tf, keyField;
+    TextArea ta;
+    Button sendButton, cancelButton;
+    PrintStream pr;
+    Socket s;
+
+
+    Sender() {
+        // Initialize GUI components
+        f = new Frame("Sender - Caesar Cipher Chat");
+        f.setSize(400, 400);
+        tf = new TextField(20);
+        keyField = new TextField(5);
+        ta = new TextArea(20, 20);
+        sendButton = new Button("Send");
+        cancelButton = new Button("Cancel");
+
+
+        // Set layout and add components
+        f.setLayout(new FlowLayout());
+        f.add(new Label("Enter Message:"));
+        f.add(tf);
+        f.add(new Label("Enter Key:"));
+        f.add(keyField);
+        f.add(ta);
+        f.add(sendButton);
+        f.add(cancelButton);
+
+
+        // Add action listeners
+        sendButton.addActionListener(this);
+        cancelButton.addActionListener(this);
+
+
+        // Display the frame
+        f.setVisible(true);
+
+
+        try {
+            // Connect to the receiver
+            s = new Socket("localhost", 2000); // Replace "localhost" with the receiver's IP
+            pr = new PrintStream(s.getOutputStream());
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+
+    public void actionPerformed(ActionEvent ae) {
+        if (ae.getSource() == sendButton) {
+            try {
+                // Get the message and key from the text fields
+                String message = tf.getText();
+                int key = Integer.parseInt(keyField.getText());
+
+
+                // Encrypt the message using Caesar Cipher
+                String encryptedMessage = encrypt(message, key);
+
+
+                // Send the encrypted message and key to the receiver
+                pr.println(encryptedMessage);
+                pr.println(key);
+
+
+                // Display the encrypted message in the text area
+                ta.append("Sent: " + encryptedMessage + "\n");
+
+
+                // Clear the input fields
+                tf.setText("");
+                keyField.setText("");
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+        } else if (ae.getSource() == cancelButton) {
+            // Clear the input fields
+            tf.setText("");
+            keyField.setText("");
+        }
+    }
+
+
+    // Caesar Cipher encryption method
+    private String encrypt(String message, int key) {
+        StringBuilder encrypted = new StringBuilder();
+        for (char c : message.toCharArray()) {
+            if (Character.isLetter(c)) {
+                char base = Character.isLowerCase(c) ? 'a' : 'A';
+                encrypted.append((char) ((c - base + key) % 26 + base));
+            } else {
+                encrypted.append(c);
+            }
+        }
+        return encrypted.toString();
+    }
+
+
+    public static void main(String[] args) {
+        new Sender();
+    }
+}
+Receiver
+import java.awt.*;
+import java.awt.event.*;
+import java.net.*;
+import java.io.*;
+
+
+class Receiver implements ActionListener {
+    Frame f;
+    TextArea ta;
+    Button closeButton;
+    ServerSocket ss;
+    Socket s;
+    BufferedReader br;
+
+
+    Receiver() {
+        // Initialize GUI components
+        f = new Frame("Receiver - Caesar Cipher Chat");
+        f.setSize(400, 400);
+        ta = new TextArea(20, 20);
+        closeButton = new Button("Close");
+
+
+        // Set layout and add components
+        f.setLayout(new FlowLayout());
+        f.add(ta);
+        f.add(closeButton);
+
+
+        // Add action listener
+        closeButton.addActionListener(this);
+
+
+        // Display the frame
+        f.setVisible(true);
+
+
+        try {
+            // Create a server socket and accept connection from the sender
+            ss = new ServerSocket(2000);
+            s = ss.accept();
+            br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+
+
+            // Start a thread to listen for incoming messages
+            new Thread(() -> {
+                try {
+                    while (true) {
+                        // Read the encrypted message and key
+                        String encryptedMessage = br.readLine();
+                        int key = Integer.parseInt(br.readLine());
+
+
+                        // Decrypt the message
+                        String decryptedMessage = decrypt(encryptedMessage, key);
+
+
+                        // Display the decrypted message in the text area
+                        ta.append("Received: " + decryptedMessage + "\n");
+                    }
+                } catch (Exception e) {
+                    System.out.println(e);
+                }
+            }).start();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+
+    public void actionPerformed(ActionEvent ae) {
+        if (ae.getSource() == closeButton) {
+            // Close the application
+            System.exit(0);
+        }
+    }
+
+
+    // Caesar Cipher decryption method
+    private String decrypt(String encryptedMessage, int key) {
+        StringBuilder decrypted = new StringBuilder();
+        for (char c : encryptedMessage.toCharArray()) {
+            if (Character.isLetter(c)) {
+                char base = Character.isLowerCase(c) ? 'a' : 'A';
+                decrypted.append((char) ((c - base - key + 26) % 26 + base));
+            } else {
+                decrypted.append(c);
+            }
+        }
+        return decrypted.toString();
+    }
+
+
+    public static void main(String[] args) {
+        new Receiver();
+    }
+}
